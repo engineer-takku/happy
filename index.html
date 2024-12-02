@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday!</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(45deg, #ff9a9e, #fad0c4);
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            color: white;
+            font-size: 3em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+
+        .message {
+            color: white;
+            font-size: 1.5em;
+            margin-bottom: 30px;
+            padding: 0 20px;
+        }
+
+        .cake {
+            font-size: 5em;
+            margin: 20px;
+            animation: bounce 2s infinite;
+        }
+
+        .balloons {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .balloon {
+            position: absolute;
+            animation: float 6s infinite;
+            font-size: 2em;
+        }
+
+        .music-control {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 2;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .music-control:hover {
+            transform: scale(1.1);
+        }
+
+        .note {
+            position: absolute;
+            font-size: 1.5em;
+            animation: floatNote 4s linear infinite;
+            opacity: 0;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @keyframes float {
+            0% { transform: translateY(100vh); }
+            100% { transform: translateY(-100px) rotate(360deg); }
+        }
+
+        @keyframes floatNote {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 0;
+            }
+            20% {
+                opacity: 1;
+            }
+            80% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) rotate(20deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="balloons" id="balloons"></div>
+    <div class="container">
+        <h1>お誕生日おめでとう！</h1>
+        <div class="cake">🎂</div>
+        <div class="message" id="message">素敵な1年になりますように！</div>
+    </div>
+    <div class="music-control" id="musicControl">🔇</div>
+
+    <script>
+        // 音符の追加
+        function createNote() {
+            if (!isMusicPlaying) return;
+
+            const notes = ['♪', '♫', '♩', '♬'];
+            const note = document.createElement('div');
+            note.className = 'note';
+            note.textContent = notes[Math.floor(Math.random() * notes.length)];
+            note.style.left = `${Math.random() * 100}vw`;
+            note.style.top = `${Math.random() * 100}vh`;
+            document.body.appendChild(note);
+
+            note.addEventListener('animationend', () => note.remove());
+        }
+
+        // AudioContextの遅延初期化
+        let audioContext;
+        let isMusicPlaying = false;
+
+        // Happy Birthday の音符データ（ハ長調）
+        const notes = [
+            { note: 'C4', duration: 0.75 }, { note: 'C4', duration: 0.25 },
+            { note: 'D4', duration: 1 }, { note: 'C4', duration: 1 },
+            { note: 'F4', duration: 1 }, { note: 'E4', duration: 2 },
+            { note: 'C4', duration: 0.75 }, { note: 'C4', duration: 0.25 },
+            { note: 'D4', duration: 1 }, { note: 'C4', duration: 1 },
+            { note: 'G4', duration: 1 }, { note: 'F4', duration: 2 },
+            { note: 'C4', duration: 0.75 }, { note: 'C4', duration: 0.25 },
+            { note: 'C5', duration: 1 }, { note: 'A4', duration: 1 },
+            { note: 'F4', duration: 1 }, { note: 'E4', duration: 1 },
+            { note: 'D4', duration: 1 }, { note: 'Bb4', duration: 0.75 },
+            { note: 'Bb4', duration: 0.25 }, { note: 'A4', duration: 1 },
+            { note: 'F4', duration: 1 }, { note: 'G4', duration: 1 },
+            { note: 'F4', duration: 2 },
+        ];
+
+        // 周波数取得
+        function getFrequency(note) {
+            const frequencies = {
+                C4: 261.63, D4: 293.66, E4: 329.63,
+                F4: 349.23, G4: 392.00, A4: 440.00,
+                Bb4: 466.16, C5: 523.25
+            };
+            return frequencies[note];
+        }
+
+        // ノート再生
+        async function playNote(frequency, duration) {
+            if (!audioContext) return;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + duration);
+
+            return new Promise(resolve => setTimeout(resolve, duration * 1000));
+        }
+
+        // 曲再生
+        async function playMusic() {
+            for (const note of notes) {
+                if (!isMusicPlaying) break;
+                await playNote(getFrequency(note.note), note.duration);
+            }
+            if (isMusicPlaying) playMusic(); // ループ再生
+        }
+
+        // 音楽コントロール
+        const musicControl = document.getElementById('musicControl');
+        musicControl.addEventListener('click', async () => {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (isMusicPlaying) {
+                isMusicPlaying = false;
+                musicControl.textContent = '🔇';
+            } else {
+                await audioContext.resume();
+                isMusicPlaying = true;
+                musicControl.textContent = '🔊';
+                playMusic();
+            }
+        });
+
+        // バルーン作成
+        const balloons = ['🎈', '🎊', '🎉', '⭐'];
+        const balloonsContainer = document.getElementById('balloons');
+
+        function createBalloon() {
+            const balloon = document.createElement('div');
+            balloon.className = 'balloon';
+            balloon.textContent = balloons[Math.floor(Math.random() * balloons.length)];
+            balloon.style.left = Math.random() * 100 + 'vw';
+            balloon.style.animationDuration = (6 + Math.random() * 4) + 's';
+            balloonsContainer.appendChild(balloon);
+
+            balloon.addEventListener('animationend', () => {
+                balloon.remove();
+            });
+        }
+
+        setInterval(createBalloon, 300);
+        setInterval(createNote, 500);
+
+        // カスタムメッセージ
+        const urlParams = new URLSearchParams(window.location.search);
+        const customMessage = urlParams.get('message');
+        if (customMessage) {
+            document.getElementById('message').textContent = decodeURIComponent(customMessage);
+        }
+    </script>
+</body>
+</html>
